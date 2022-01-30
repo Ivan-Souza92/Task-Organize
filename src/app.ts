@@ -18,7 +18,7 @@ private initMongoose(): void {
 }
 
 private connectDatabase(): void {
-  mongoose.connect('mongodb+srv://ivan-souza_92:@cluster0.1he34.mongodb.net/curso-javascript?retryWrites=true&w=majority', {
+  mongoose.connect('mongodb+srv://ivan-souza_92:jRxVWcXGUQrJBoh6@cluster0.1he34.mongodb.net/curso-javascript?retryWrites=true&w=majority', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useFindAndModify: false,
