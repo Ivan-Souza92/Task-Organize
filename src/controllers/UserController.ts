@@ -1,8 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
-import { Types, isValidObjectId, Mongoose } from 'mongoose';
+import HttpStatusCode from '../responses/HttpStatusCode';
 import User from '../schemas/User';
 import ValidationService from '../services/ValidationService';
 import Controller from './Controller';
+
+import ServerErrorException from '../errors/ServerErrorException';
+import IdInvalidException from '../errors/IdInvalidException';
 
 class UserController extends Controller {
   constructor() {
@@ -18,49 +21,65 @@ class UserController extends Controller {
   }
 
   private async list(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const users = await User.find();
-
-    return res.send(users);
+    try {
+      const users = await User.find();
+      return res.send(users);
+    } catch (error) {
+      return res.send(new ServerErrorException(error));
+    }
   }
 
   private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    // if (!Types.ObjectId.isValid(id)) return res.status(400).send('Id não existente');
-    if (ValidationService.validateId(id)) return res.status(400).send('Erro');
+      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
 
-    const user = await User.findById(id);
-
-    return res.send(user);
+      const user = await User.findById(id);
+      return res.send(user);
+    } catch (error) {
+      return res.send(new ServerErrorException(error));
+    }
   }
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const user = await User.create(req.body);
+    try {
+      const user = await User.create(req.body);
 
-    return res.send(user);
+      return res.send(user);
+    } catch (error) {
+      return res.send(new ServerErrorException(error));
+    }
   }
 
   private async edit(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    if (ValidationService.validateId(id)) return res.status(400).send('Erro');
+      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
 
-    const user = await User.findByIdAndUpdate(id, req.body, () => {});
-    return res.send(user);
+      const user = await User.findByIdAndUpdate(id, req.body, () => {});
+      return res.send(user);
+    } catch (error) {
+      return res.send(new ServerErrorException(error));
+    }
   }
 
   private async delete(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    if (ValidationService.validateId(id)) return res.status(400).send('Erro');
+      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
 
-    const user = await User.findById(id);
+      const user = await User.findById(id);
 
-    if (user) {
-      user.deleteOne();
-      res.send(user);
-    } else {
+      if (user) {
+        user.deleteOne();
+        res.send(user);
+      }
       return res.status(204).send();
+    } catch (error) {
+      return res.send(new ServerErrorException(error));
     }
   }
 }

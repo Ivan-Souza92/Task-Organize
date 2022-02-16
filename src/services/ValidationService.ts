@@ -1,4 +1,3 @@
-import { NextFunction } from 'express';
 import { isValidObjectId } from 'mongoose';
 
 class ValidationService {
