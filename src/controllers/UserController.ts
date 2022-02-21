@@ -1,11 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import HttpStatusCode from '../responses/HttpStatusCode';
 import User from '../schemas/User';
 import ValidationService from '../services/ValidationService';
 import Controller from './Controller';
 
 import ServerErrorException from '../errors/ServerErrorException';
-import IdInvalidException from '../errors/IdInvalidException';
 import NoContentException from '../errors/NoContentException';
 import responseCreate from '../responses/ResponseCreate';
 import responseOk from '../responses/ResponseOk';
@@ -26,9 +24,12 @@ class UserController extends Controller {
   private async list(req: Request, res: Response, next: NextFunction): Promise<Response> {
     try {
       const users = await User.find();
-      return res.send(responseOk(res, users));
+
+      if (users.length) return responseOk(res, users);
+
+      next(new NoContentException());
     } catch (error) {
-      return res.send(new ServerErrorException(error));
+      next(new ServerErrorException(error));
     }
   }
 
@@ -36,12 +37,15 @@ class UserController extends Controller {
     try {
       const { id } = req.params;
 
-      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
+      if (ValidationService.validateId(id, next)) return;
 
       const user = await User.findById(id);
-      return res.send(responseOk(res, user));
+
+      if (user) return responseOk(res, user);
+
+      next(new NoContentException());
     } catch (error) {
-      return res.send(new ServerErrorException(error));
+      next(new ServerErrorException(error));
     }
   }
 
@@ -49,9 +53,9 @@ class UserController extends Controller {
     try {
       const user = await User.create(req.body);
 
-      return res.send(responseCreate(res, user));
+      return responseCreate(res, user);
     } catch (error) {
-      return res.send(new ServerErrorException(error));
+      next(new ServerErrorException(error));
     }
   }
 
@@ -59,12 +63,15 @@ class UserController extends Controller {
     try {
       const { id } = req.params;
 
-      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
+      if (ValidationService.validateId(id, next)) return;
 
       const user = await User.findByIdAndUpdate(id, req.body, () => {});
-      return res.send(responseOk(res, user));
+
+      if (user) return responseOk(res, user);
+
+      next(new NoContentException());
     } catch (error) {
-      return res.send(new ServerErrorException(error));
+      next(new ServerErrorException(error));
     }
   }
 
@@ -72,17 +79,17 @@ class UserController extends Controller {
     try {
       const { id } = req.params;
 
-      if (ValidationService.validateId(id)) return res.status(HttpStatusCode.BAD_REQUEST).send(new IdInvalidException());
+      if (ValidationService.validateId(id, next)) return;
 
       const user = await User.findById(id);
 
       if (user) {
         user.deleteOne();
-        return res.send(responseOk(res, user));
+        return responseOk(res, user);
       }
-      return res.status(HttpStatusCode.NO_CONTENT).send(new NoContentException());
+      next(new NoContentException());
     } catch (error) {
-      return res.send(new ServerErrorException(error));
+      next(new ServerErrorException(error));
     }
   }
 }
