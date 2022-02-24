@@ -51,4 +51,4 @@ const TaskSchema = new Schema({
   },
 });
 
-export default model<TaskInterface>('User', TaskSchema);
+export default model<TaskInterface>('Task', TaskSchema);

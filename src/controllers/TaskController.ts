@@ -1,21 +1,21 @@
 import { NextFunction, Request, Response } from 'express';
-import User from '../schemas/User';
-import ValidationService from '../services/ValidationService';
 import Controller from './Controller';
+import ValidationService from '../services/ValidationService';
 
 import ServerErrorException from '../errors/ServerErrorException';
 import NoContentException from '../errors/NoContentException';
 import responseCreate from '../responses/ResponseCreate';
-import UserService from '../services/UserService';
 import responseOk from '../responses/ResponseOk';
+import Task, { TaskInterface } from '../schemas/Task';
+import TaskService from '../services/TaskService';
 
-class UserController extends Controller {
+class TaskController extends Controller {
   constructor() {
-    super('/user');
+    super('/task');
   }
 
   protected initRoutes(): void {
-    this.router.get(this.path, this.list);
+    this.router.get(`${this.path}/:filter/:_id`, this.list);
     this.router.get(`${this.path}/:id`, this.findById);
     this.router.post(this.path, this.create);
     this.router.put(`${this.path}/:id`, this.edit);
@@ -24,10 +24,9 @@ class UserController extends Controller {
 
   private async list(req: Request, res: Response, next: NextFunction): Promise<Response> {
     try {
-      const users = await User.find();
+      const tasks = await Task.find(TaskService.getParamsList(req)).populate('responsible');
 
-      if (users.length) return responseOk(res, users);
-
+      if (tasks.length) return responseOk(res, tasks);
       next(new NoContentException());
     } catch (error) {
       next(new ServerErrorException(error));
@@ -37,13 +36,10 @@ class UserController extends Controller {
   private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
     try {
       const { id } = req.params;
-
       if (ValidationService.validateId(id, next)) return;
 
-      const user = await User.findById(id);
-
-      if (user) return responseOk(res, user);
-
+      const task = await Task.findById(id);
+      if (task) return responseOk(res, task);
       next(new NoContentException());
     } catch (error) {
       next(new ServerErrorException(error));
@@ -52,9 +48,13 @@ class UserController extends Controller {
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<Response> {
     try {
-      const user = await User.create(req.body);
+      let task: TaskInterface = req.body;
 
-      return responseCreate(res, user);
+      TaskService.checkStatusFinished(task);
+      task = await Task.create(task);
+      task = await Task.findById(task.id).populate('responsible');
+
+      return responseCreate(res, task);
     } catch (error) {
       next(new ServerErrorException(error));
     }
@@ -63,12 +63,16 @@ class UserController extends Controller {
   private async edit(req: Request, res: Response, next: NextFunction): Promise<Response> {
     try {
       const { id } = req.params;
-
       if (ValidationService.validateId(id, next)) return;
 
-      const user = await User.findByIdAndUpdate(id, req.body, () => {});
+      let task: TaskInterface = req.body;
+      TaskService.checkStatusFinished(task);
 
-      if (user) return responseOk(res, user);
+      task = await Task.findByIdAndUpdate(id, req.body, () => {});
+      if (task) {
+        task = await Task.findById(task.id).populate('responsible');
+        return responseOk(res, task);
+      }
 
       next(new NoContentException());
     } catch (error) {
@@ -80,12 +84,11 @@ class UserController extends Controller {
     try {
       const { id } = req.params;
       if (ValidationService.validateId(id, next)) return;
-      if (await UserService.validateExistAnyTask(id, next)) return;
 
-      const user = await User.findById(id);
-      if (user) {
-        user.deleteOne();
-        return responseOk(res, user);
+      const task = await Task.findById(id);
+      if (task) {
+        task.deleteOne();
+        return responseOk(res, task);
       }
 
       next(new NoContentException());
@@ -95,4 +98,4 @@ class UserController extends Controller {
   }
 }
 
-export default UserController;
+export default TaskController;
